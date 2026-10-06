@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Трекер привычек с целями и диаграммой</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      padding: 30px 15px;
+      margin: 0;
+    }
+    .container {
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 500px;
+    }
+    h1 {
+      font-size: 24px;
+      color: #1a1a1a;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* Форма добавления */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 25px;
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #eaeaea;
+    }
+    .form-row {
+      display: flex;
+      gap: 10px;
+    }
+    input[type="text"], input[type="number"], select {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+    }
+    input[type="text"] { flex: 2; }
+    input[type="number"] { width: 80px; }
+    select { flex: 1; }
+
+    button.add-btn {
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    button.add-btn:hover { background-color: #0056b3; }
+
+    /* Список привычек */
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .habit-card {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px;
+      background: #ffffff;
+      border: 1px solid #e9ecef;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+    .habit-info {
+      flex: 1;
+    }
+    .habit-title {
+      font-weight: 600;
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    .habit-meta {
+      font-size: 12px;
+      color: #6c757d;
+    }
+
+    /* Круговая диаграмма (Conic Gradient) */
+    .chart-container {
+      position: relative;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .chart-center {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /* Кнопки действий */
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .btn-action {
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .inc-btn { background: #e7f5ff; color: #0366d6; }
+    .inc-btn:hover { background: #d0ebff; }
+    .del-btn { background: #ffe3e3; color: #d9534f; }
+    .del-btn:hover { background: #ffc9c9; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Трекер привычек</h1>
+    
+    <div class="form-group">
+      <input type="text" id="habitName" placeholder="Название (например: Прочитать страниц)">
+      <div class="form-row">
+        <input type="number" id="habitTarget" placeholder="Цель" min="1" value="10">
+        <select id="habitPeriod">
+          <option value="день">в день</option>
+          <option value="неделю">в неделю</option>
+          <option value="месяц">в месяц</option>
+          <option value="год">в год</option>
+        </select>
+      </div>
+      <button class="add-btn" onclick="addHabit()">Добавить привычку</button>
+    </div>
+
+    <ul id="habitList"></ul>
+  </div>
+
+  <script>
+    let habits = JSON.parse(localStorage.getItem('habits_v2')) || [];
+
+    function renderHabits() {
+      const list = document.getElementById('habitList');
+      list.innerHTML = '';
+
+      habits.forEach((habit, index) => {
+        // Подсчёт процента
+        const progress = Math.min(100, Math.round((habit.current / habit.target) * 100));
+        const isCompleted = habit.current >= habit.target;
+        
+        // Цвет диаграммы: зелёный при выполнении, синий в процессе
+        const chartColor = isCompleted ? '#28a745' : '#007bff';
+
+        const li = document.createElement('li');
+        li.className = 'habit-card';
+        li.innerHTML = `
+          <!-- Круговая диаграмма -->
+          <div class="chart-container" style="background: conic-gradient(${chartColor} ${progress}%, #e9ecef ${progress}% 100%);">
+            <div class="chart-center">${progress}%</div>
+          </div>
+
+          <!-- Описание -->
+          <div class="habit-info">
+            <div class="habit-title">${habit.name}</div>
+            <div class="habit-meta">
+              Прогресс: <b>${habit.current}</b> / ${habit.target} (${habit.period})
+            </div>
+          </div>
+
+          <!-- Управление -->
+          <div class="actions">
+            <button class="btn-action inc-btn" onclick="increaseProgress(${index})">+1</button>
+            <button class="btn-action del-btn" onclick="deleteHabit(${index})">✕</button>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+
+      localStorage.setItem('habits_v2', JSON.stringify(habits));
+    }
+
+    function addHabit() {
+      const nameInput = document.getElementById('habitName');
+      const targetInput = document.getElementById('habitTarget');
+      const periodSelect = document.getElementById('habitPeriod');
+
+      const name = nameInput.value.trim();
+      const target = parseInt(targetInput.value);
+      const period = periodSelect.value;
+
+      if (name && target > 0) {
+        habits.push({
+          name: name,
+          target: target,
+          current: 0,
+          period: period
+        });
+
+        nameInput.value = '';
+        targetInput.value = '10';
+        renderHabits();
+      }
+    }
+
+    function increaseProgress(index) {
+      habits[index].current += 1;
+      renderHabits();
+    }
+
+    function deleteHabit(index) {
+      habits.splice(index, 1);
+      renderHabits();
+    }
+
+    renderHabits();
+  </script>
+</body>
+</html>
